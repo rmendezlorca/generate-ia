@@ -63,3 +63,25 @@ export const paymentsApi = {
 export const seedApi = {
   seed: () => axios.post(`${API}/seed`)
 };
+
+export const backofficeApi = {
+  getStats: () => axios.get(`${API}/backoffice/stats`, { headers: getAuthHeaders() }),
+  
+  // Products
+  getProducts: () => axios.get(`${API}/backoffice/products`, { headers: getAuthHeaders() }),
+  createProduct: (data) => axios.post(`${API}/backoffice/products`, data, { headers: getAuthHeaders() }),
+  updateProduct: (id, data) => axios.put(`${API}/backoffice/products/${id}`, data, { headers: getAuthHeaders() }),
+  deleteProduct: (id) => axios.delete(`${API}/backoffice/products/${id}`, { headers: getAuthHeaders() }),
+  
+  // Promotions
+  getPromotions: () => axios.get(`${API}/backoffice/promotions`, { headers: getAuthHeaders() }),
+  createPromotion: (data) => axios.post(`${API}/backoffice/promotions`, data, { headers: getAuthHeaders() }),
+  deletePromotion: (id) => axios.delete(`${API}/backoffice/promotions/${id}`, { headers: getAuthHeaders() }),
+  
+  // Sales
+  getSales: (status) => {
+    const params = status ? `?status=${status}` : '';
+    return axios.get(`${API}/backoffice/sales${params}`, { headers: getAuthHeaders() });
+  },
+  createMockSale: () => axios.post(`${API}/backoffice/sales/mock`, {}, { headers: getAuthHeaders() })
+};

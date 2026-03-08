@@ -223,6 +223,25 @@ const Auth = () => {
               </div>
             </details>
           </div>
+
+          {/* Store Access */}
+          <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+            <p className="text-sm font-bold text-purple-900 mb-2">¿Eres un comercio?</p>
+            <p className="text-xs text-purple-700 mb-3">
+              Accede al backoffice para gestionar tus productos y ventas
+            </p>
+            <div className="bg-white p-3 rounded-lg text-xs space-y-1 mb-3">
+              <p><strong>Email:</strong> comercio@barrio.com</p>
+              <p><strong>Password:</strong> comercio123</p>
+            </div>
+            <button
+              onClick={() => navigate('/backoffice')}
+              className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold hover:opacity-90 transition-all"
+              data-testid="goto-backoffice"
+            >
+              Ir al Backoffice
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

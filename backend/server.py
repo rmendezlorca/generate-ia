@@ -40,6 +40,8 @@ class User(BaseModel):
     email: EmailStr
     name: str
     phone: Optional[str] = None
+    role: str = "user"  # "user" or "store"
+    store_id: Optional[str] = None  # If role is "store", this links to their store
     lat: Optional[float] = None
     lng: Optional[float] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -49,6 +51,8 @@ class UserCreate(BaseModel):
     password: str
     name: str
     phone: Optional[str] = None
+    role: str = "user"  # "user" or "store"
+    store_id: Optional[str] = None  # Required if role is "store"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -169,6 +173,56 @@ class MockPaymentResponse(BaseModel):
     amount: float
     message: str
 
+class ProductCreate(BaseModel):
+    name: str
+    description: str
+    category: str
+    price: float
+    original_price: Optional[float] = None
+    image_url: str
+    in_stock: bool = True
+    is_promoted: bool = False
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = None
+    original_price: Optional[float] = None
+    image_url: Optional[str] = None
+    in_stock: Optional[bool] = None
+    is_promoted: Optional[bool] = None
+
+class PromotionCreate(BaseModel):
+    title: str
+    description: str
+    discount_percentage: float
+    valid_until: datetime
+    product_id: Optional[str] = None
+
+class Sale(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    store_id: str
+    product_id: str
+    product_name: str
+    quantity: int
+    price: float
+    total: float
+    customer_id: str
+    customer_name: str
+    status: str = "completed"  # completed, pending, cancelled
+    payment_status: str = "paid"  # paid, pending
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StoreStats(BaseModel):
+    total_sales: float
+    total_orders: int
+    total_products: int
+    active_promotions: int
+    pending_amount: float
+    this_month_sales: float
+
 # ============= HELPER FUNCTIONS =============
 
 def hash_password(password: str) -> str:
@@ -219,11 +273,19 @@ async def register(user_data: UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # If registering as store, verify store exists
+    if user_data.role == "store" and user_data.store_id:
+        store = await db.stores.find_one({"id": user_data.store_id})
+        if not store:
+            raise HTTPException(status_code=400, detail="Store not found")
+    
     hashed_password = hash_password(user_data.password)
     user = User(
         email=user_data.email,
         name=user_data.name,
-        phone=user_data.phone
+        phone=user_data.phone,
+        role=user_data.role,
+        store_id=user_data.store_id
     )
     
     user_dict = user.model_dump()
@@ -621,6 +683,31 @@ async def seed_database():
     # Check if already seeded
     existing_stores = await db.stores.count_documents({})
     if existing_stores > 0:
+        # Create demo store user if doesn't exist
+        existing_store_user = await db.users.find_one({"email": "comercio@barrio.com"})
+        if not existing_store_user:
+            stores = await db.stores.find({}, {"_id": 0}).to_list(10)
+            if stores:
+                demo_store = stores[0]
+                demo_store_user = {
+                    "id": str(uuid.uuid4()),
+                    "email": "comercio@barrio.com",
+                    "password": hash_password("comercio123"),
+                    "name": f"{demo_store['name']} - Admin",
+                    "phone": demo_store.get("phone", ""),
+                    "role": "store",
+                    "store_id": demo_store["id"],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(demo_store_user)
+                return {
+                    "message": "Store user created",
+                    "demo_store_login": {
+                        "email": "comercio@barrio.com",
+                        "password": "comercio123",
+                        "store_name": demo_store["name"]
+                    }
+                }
         return {"message": "Database already seeded"}
     
     # Sample stores
@@ -761,7 +848,276 @@ async def seed_database():
     
     await db.promotions.insert_many(promotions_data)
     
-    return {"message": "Database seeded successfully", "stores": len(stores_data), "products": len(products_data)}
+    # Create a demo store user
+    demo_store = stores_data[0]  # Almacén Don Pedro
+    demo_store_user = {
+        "id": str(uuid.uuid4()),
+        "email": "comercio@barrio.com",
+        "password": hash_password("comercio123"),
+        "name": "Almacén Don Pedro - Admin",
+        "phone": "+56912345678",
+        "role": "store",
+        "store_id": demo_store["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(demo_store_user)
+    
+    return {
+        "message": "Database seeded successfully",
+        "stores": len(stores_data),
+        "products": len(products_data),
+        "demo_store_login": {
+            "email": "comercio@barrio.com",
+            "password": "comercio123",
+            "store_name": demo_store["name"]
+        }
+    }
+
+# ============= BACKOFFICE ROUTES =============
+
+# Middleware to check if user is a store owner
+async def get_store_user(current_user: User = Depends(get_current_user)):
+    if current_user.role != "store" or not current_user.store_id:
+        raise HTTPException(status_code=403, detail="Access denied. Store account required.")
+    return current_user
+
+# Dashboard Stats
+@api_router.get("/backoffice/stats", response_model=StoreStats)
+async def get_store_stats(store_user: User = Depends(get_store_user)):
+    store_id = store_user.store_id
+    
+    # Get sales
+    sales = await db.sales.find({"store_id": store_id}, {"_id": 0}).to_list(10000)
+    total_sales = sum(sale.get("total", 0) for sale in sales)
+    total_orders = len(sales)
+    
+    # Get pending sales
+    pending_sales = [s for s in sales if s.get("payment_status") == "pending"]
+    pending_amount = sum(sale.get("total", 0) for sale in pending_sales)
+    
+    # This month sales
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    this_month_sales = sum(
+        sale.get("total", 0) for sale in sales 
+        if datetime.fromisoformat(sale.get("created_at", "2020-01-01")) >= month_start
+    )
+    
+    # Get products count
+    products = await db.products.find({"store_id": store_id}).to_list(10000)
+    total_products = len(products)
+    
+    # Get active promotions
+    promotions = await db.promotions.find({
+        "store_id": store_id,
+        "is_active": True
+    }).to_list(1000)
+    active_promotions = len(promotions)
+    
+    return StoreStats(
+        total_sales=total_sales,
+        total_orders=total_orders,
+        total_products=total_products,
+        active_promotions=active_promotions,
+        pending_amount=pending_amount,
+        this_month_sales=this_month_sales
+    )
+
+# Products Management
+@api_router.get("/backoffice/products", response_model=List[Product])
+async def get_store_products(store_user: User = Depends(get_store_user)):
+    products = await db.products.find(
+        {"store_id": store_user.store_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    for product in products:
+        if isinstance(product.get("created_at"), str):
+            product["created_at"] = datetime.fromisoformat(product["created_at"])
+    
+    return products
+
+@api_router.post("/backoffice/products", response_model=Product)
+async def create_store_product(
+    product_data: ProductCreate,
+    store_user: User = Depends(get_store_user)
+):
+    product = Product(
+        store_id=store_user.store_id,
+        **product_data.model_dump()
+    )
+    
+    product_dict = product.model_dump()
+    product_dict["created_at"] = product_dict["created_at"].isoformat()
+    
+    await db.products.insert_one(product_dict)
+    
+    # Update store's active_promotions count if promoted
+    if product.is_promoted:
+        await db.stores.update_one(
+            {"id": store_user.store_id},
+            {"$inc": {"active_promotions": 1}}
+        )
+    
+    return product
+
+@api_router.put("/backoffice/products/{product_id}", response_model=Product)
+async def update_store_product(
+    product_id: str,
+    product_data: ProductUpdate,
+    store_user: User = Depends(get_store_user)
+):
+    # Check if product belongs to store
+    existing = await db.products.find_one({
+        "id": product_id,
+        "store_id": store_user.store_id
+    }, {"_id": 0})
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Update only provided fields
+    update_dict = {k: v for k, v in product_data.model_dump().items() if v is not None}
+    
+    if update_dict:
+        await db.products.update_one(
+            {"id": product_id},
+            {"$set": update_dict}
+        )
+    
+    # Get updated product
+    updated = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if isinstance(updated.get("created_at"), str):
+        updated["created_at"] = datetime.fromisoformat(updated["created_at"])
+    
+    return Product(**updated)
+
+@api_router.delete("/backoffice/products/{product_id}")
+async def delete_store_product(
+    product_id: str,
+    store_user: User = Depends(get_store_user)
+):
+    result = await db.products.delete_one({
+        "id": product_id,
+        "store_id": store_user.store_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {"message": "Product deleted successfully"}
+
+# Promotions Management
+@api_router.get("/backoffice/promotions", response_model=List[Promotion])
+async def get_store_promotions(store_user: User = Depends(get_store_user)):
+    promotions = await db.promotions.find(
+        {"store_id": store_user.store_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for promo in promotions:
+        if isinstance(promo.get("created_at"), str):
+            promo["created_at"] = datetime.fromisoformat(promo["created_at"])
+        if isinstance(promo.get("valid_until"), str):
+            promo["valid_until"] = datetime.fromisoformat(promo["valid_until"])
+    
+    return promotions
+
+@api_router.post("/backoffice/promotions", response_model=Promotion)
+async def create_store_promotion(
+    promo_data: PromotionCreate,
+    store_user: User = Depends(get_store_user)
+):
+    promotion = Promotion(
+        store_id=store_user.store_id,
+        **promo_data.model_dump()
+    )
+    
+    promo_dict = promotion.model_dump()
+    promo_dict["created_at"] = promo_dict["created_at"].isoformat()
+    promo_dict["valid_until"] = promo_dict["valid_until"].isoformat()
+    
+    await db.promotions.insert_one(promo_dict)
+    
+    # Update store's active_promotions count
+    await db.stores.update_one(
+        {"id": store_user.store_id},
+        {"$inc": {"active_promotions": 1}}
+    )
+    
+    return promotion
+
+@api_router.delete("/backoffice/promotions/{promotion_id}")
+async def delete_store_promotion(
+    promotion_id: str,
+    store_user: User = Depends(get_store_user)
+):
+    result = await db.promotions.delete_one({
+        "id": promotion_id,
+        "store_id": store_user.store_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    
+    # Update store's active_promotions count
+    await db.stores.update_one(
+        {"id": store_user.store_id},
+        {"$inc": {"active_promotions": -1}}
+    )
+    
+    return {"message": "Promotion deleted successfully"}
+
+# Sales / Cuenta Corriente
+@api_router.get("/backoffice/sales", response_model=List[Sale])
+async def get_store_sales(
+    store_user: User = Depends(get_store_user),
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    query = {"store_id": store_user.store_id}
+    if status:
+        query["payment_status"] = status
+    
+    sales = await db.sales.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    for sale in sales:
+        if isinstance(sale.get("created_at"), str):
+            sale["created_at"] = datetime.fromisoformat(sale["created_at"])
+    
+    return sales
+
+# Mock sale creation for testing
+@api_router.post("/backoffice/sales/mock")
+async def create_mock_sale(store_user: User = Depends(get_store_user)):
+    """Create a mock sale for testing the cuenta corriente"""
+    products = await db.products.find({"store_id": store_user.store_id}).to_list(10)
+    
+    if not products:
+        raise HTTPException(status_code=400, detail="No products found for this store")
+    
+    product = products[0]
+    quantity = 2
+    
+    sale = Sale(
+        store_id=store_user.store_id,
+        product_id=product["id"],
+        product_name=product["name"],
+        quantity=quantity,
+        price=product["price"],
+        total=product["price"] * quantity,
+        customer_id="demo-customer",
+        customer_name="Cliente Demo",
+        status="completed",
+        payment_status="paid"
+    )
+    
+    sale_dict = sale.model_dump()
+    sale_dict["created_at"] = sale_dict["created_at"].isoformat()
+    
+    await db.sales.insert_one(sale_dict)
+    
+    return sale
 
 app.include_router(api_router)
 

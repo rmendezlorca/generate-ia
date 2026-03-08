@@ -18,11 +18,18 @@ import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 
+// Backoffice
+import BackofficeLayout from './components/BackofficeLayout';
+import Dashboard from './pages/backoffice/Dashboard';
+import Products from './pages/backoffice/Products';
+import Promotions from './pages/backoffice/Promotions';
+import Sales from './pages/backoffice/Sales';
+
 const AppContent = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [cartCount, setCartCount] = useState(0);
-  const hideNavigation = location.pathname === '/auth';
+  const hideNavigation = location.pathname === '/auth' || location.pathname.startsWith('/backoffice');
 
   useEffect(() => {
     // Seed database on first load
@@ -66,6 +73,14 @@ const AppContent = () => {
         <Route path="/auth" element={<Auth />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<Notifications />} />
+        
+        {/* Backoffice Routes */}
+        <Route path="/backoffice" element={<BackofficeLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<Products />} />
+          <Route path="promotions" element={<Promotions />} />
+          <Route path="sales" element={<Sales />} />
+        </Route>
       </Routes>
       <Toaster position="top-center" richColors />
     </div>
