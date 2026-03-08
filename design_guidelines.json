@@ -1,0 +1,207 @@
+{
+  "brand_identity": {
+    "name": "Barrio",
+    "tagline": "Ahorra en cada esquina",
+    "description": "Hyper-local marketplace for smart savings and community connection.",
+    "emotional_tone": "Vibrant, Energetic, Trustworthy, Smart",
+    "archetype": "The Vibrant Neighbor (Archetype 6 mix with 2)",
+    "keywords": ["Local", "Savings", "Route", "Community", "Fresh"]
+  },
+  "design_tokens": {
+    "typography": {
+      "font_family": {
+        "heading": "Outfit, sans-serif",
+        "body": "Plus Jakarta Sans, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+        "h2": "text-3xl font-bold tracking-tight",
+        "h3": "text-2xl font-semibold",
+        "body_lg": "text-lg leading-relaxed",
+        "body": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground",
+        "tiny": "text-xs font-medium uppercase tracking-wider"
+      },
+      "imports": [
+        "@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');"
+      ]
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#FF6B00",
+          "foreground": "#FFFFFF",
+          "50": "#FFF7ED",
+          "100": "#FFEDD5",
+          "500": "#FF6B00",
+          "600": "#EA580C",
+          "900": "#7C2D12"
+        },
+        "secondary": {
+          "DEFAULT": "#00E676",
+          "foreground": "#003311",
+          "50": "#ECFDF5",
+          "500": "#10B981",
+          "600": "#059669"
+        },
+        "accent": {
+          "DEFAULT": "#6200EA",
+          "foreground": "#FFFFFF",
+          "50": "#F5F3FF",
+          "500": "#8B5CF6"
+        },
+        "background": {
+          "DEFAULT": "#F8FAFC",
+          "paper": "#FFFFFF",
+          "subtle": "#F1F5F9"
+        },
+        "text": {
+          "primary": "#0F172A",
+          "secondary": "#64748B",
+          "muted": "#94A3B8"
+        },
+        "status": {
+          "success": "#00C853",
+          "warning": "#FFD600",
+          "error": "#FF3D00",
+          "info": "#2979FF"
+        }
+      },
+      "gradients": {
+        "primary": "bg-gradient-to-br from-orange-400 to-orange-600",
+        "savings": "bg-gradient-to-r from-emerald-400 to-teal-500",
+        "premium": "bg-gradient-to-br from-violet-500 to-purple-700",
+        "map_route": "bg-gradient-to-r from-orange-500 via-purple-500 to-emerald-500"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-4 md:p-8 lg:p-12",
+      "section_gap": "gap-8 md:gap-12",
+      "card_padding": "p-5"
+    },
+    "borders": {
+      "radius": {
+        "card": "rounded-3xl",
+        "button": "rounded-full",
+        "input": "rounded-xl"
+      },
+      "width": {
+        "thin": "border",
+        "focus": "ring-2 ring-offset-2"
+      }
+    },
+    "shadows": {
+      "card": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "float": "shadow-[0_20px_50px_rgb(0,0,0,0.1)]",
+      "glow_primary": "shadow-[0_0_20px_rgba(255,107,0,0.3)]",
+      "glow_savings": "shadow-[0_0_20px_rgba(0,230,118,0.3)]"
+    }
+  },
+  "layout_system": {
+    "grid_strategy": {
+      "bento_dashboard": "grid grid-cols-1 md:grid-cols-3 gap-4",
+      "product_feed": "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4",
+      "hero_split": "grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
+    },
+    "mobile_first_rules": [
+      "Touch targets must be min 44px height",
+      "Bottom navigation for primary destinations",
+      "Interactive maps must have safe zones for scrolling",
+      "Font size min 16px for inputs to prevent zoom"
+    ]
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 rounded-full font-bold shadow-lg transform transition-all active:scale-95",
+      "secondary": "bg-white text-primary border-2 border-primary/20 hover:border-primary/50 h-12 px-8 rounded-full font-bold",
+      "ghost": "hover:bg-accent/10 text-accent font-medium h-10 px-4 rounded-xl",
+      "fab": "fixed bottom-24 right-6 h-14 w-14 rounded-full bg-primary text-white shadow-glow_primary flex items-center justify-center z-50"
+    },
+    "cards": {
+      "product": "bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-orange-200 transition-all hover:shadow-lg group",
+      "store": "bg-white rounded-3xl p-4 border border-slate-100 flex flex-col gap-3 relative",
+      "stat": "bg-slate-50 rounded-2xl p-4 border border-slate-200"
+    },
+    "map": {
+      "style": "custom_dark_mode_with_neon_routes",
+      "markers": "html_markers_with_price_tags",
+      "provider": "Leaflet (OpenStreetMap) or Google Maps"
+    },
+    "inputs": {
+      "default": "h-12 bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary/20 rounded-xl px-4 transition-all"
+    },
+    "navigation": {
+      "bottom_bar": "fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 h-16 md:hidden z-40 flex justify-around items-center",
+      "desktop_nav": "hidden md:flex h-20 items-center justify-between px-8 bg-white border-b border-slate-100 sticky top-0 z-40"
+    }
+  },
+  "visual_assets": {
+    "images": {
+      "categories": [
+        {
+          "name": "Produce",
+          "url": "https://images.unsplash.com/photo-1758184449358-ac6f5dcd8e04?crop=entropy&cs=srgb&fm=jpg&q=85",
+          "alt": "Vibrant market stall with fruits"
+        },
+        {
+          "name": "Bakery",
+          "url": "https://images.unsplash.com/photo-1771332974908-9d8174c18416?crop=entropy&cs=srgb&fm=jpg&q=85",
+          "alt": "Artisanal pastries display"
+        },
+        {
+          "name": "Services",
+          "url": "https://images.unsplash.com/photo-1694678505383-676d78ea3b96?crop=entropy&cs=srgb&fm=jpg&q=85",
+          "alt": "Car wash service interaction"
+        }
+      ],
+      "hero": {
+        "url": "https://images.unsplash.com/photo-1651493355781-20b4e12f3231?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Person navigating city with phone"
+      },
+      "avatars": [
+        "https://images.unsplash.com/photo-1664106487244-13e13a4b07af?crop=entropy&cs=srgb&fm=jpg&q=85"
+      ]
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "stroke-2 rounded-lg"
+    }
+  },
+  "motion": {
+    "transitions": {
+      "default": "transition-all duration-300 ease-out",
+      "spring": "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+    },
+    "animations": {
+      "fade_in": "animate-in fade-in duration-500",
+      "slide_up": "animate-in slide-in-from-bottom-4 duration-500",
+      "scale_in": "animate-in zoom-in-95 duration-300",
+      "pulse_slow": "animate-pulse"
+    }
+  },
+  "accessibility": {
+    "rules": [
+      "Text contrast > 4.5:1",
+      "Focus rings must be visible (ring-2)",
+      "All images must have alt text",
+      "Interactive elements min 44x44px"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react' and 'framer-motion' immediately.",
+    "Configure tailwind.config.js with the colors and fonts defined above.",
+    "Create a 'components/ui' folder for reusable atoms (Button, Card, Input).",
+    "Use 'react-router-dom' for navigation structure.",
+    "Implement the 'Map' component using 'react-leaflet' for the MVP.",
+    "Ensure the 'Savings Route' feature uses the gradient path visual.",
+    "Do NOT use pure black (#000000); use Slate-900 (#0F172A) instead.",
+    "Apply 'data-testid' to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Avoid generic centered layouts. Use asymmetry.",
+    "Use glass-morphism (backdrop-blur) for overlays/navbars.",
+    "No generic AI emojis. Use Lucide icons.",
+    "Spacing is luxury. Don't crowd the UI."
+  ]
+}
