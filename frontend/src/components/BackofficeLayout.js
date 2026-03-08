@@ -27,8 +27,8 @@ const BackofficeLayout = () => {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col">
         {/* Logo */}
         <div className="p-6 border-b border-slate-200">
-          <h1 className="text-2xl font-bold font-heading gradient-primary bg-clip-text text-transparent" data-testid="backoffice-logo">
-            Barrio
+          <h1 className="text-2xl font-bold font-heading text-primary" data-testid="backoffice-logo">
+            Locafy
           </h1>
           <p className="text-sm text-slate-600 mt-1">Backoffice</p>
         </div>

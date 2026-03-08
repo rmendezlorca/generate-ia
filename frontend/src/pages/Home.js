@@ -76,7 +76,7 @@ const Home = () => {
               <span>Ahorra en cada esquina</span>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-heading tracking-tight" data-testid="hero-title">
-              Descubre las mejores <span className="gradient-primary bg-clip-text text-transparent">ofertas</span> de tu barrio
+              Descubre las mejores <span className="text-primary">ofertas</span> de tu barrio
             </h1>
             <p className="text-lg text-slate-600 leading-relaxed" data-testid="hero-description">
               Explora productos, promociones y servicios cercanos. Planifica tu ruta de ahorro y compra inteligente.

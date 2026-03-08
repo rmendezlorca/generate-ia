@@ -38,7 +38,12 @@ export const productsApi = {
     if (params.sort_by) query.append('sort_by', params.sort_by);
     return axios.get(`${API}/products?${query.toString()}`);
   },
-  getById: (id) => axios.get(`${API}/products/${id}`)
+  getById: (id) => axios.get(`${API}/products/${id}`),
+  getReviews: (productId) => axios.get(`${API}/products/${productId}/reviews`),
+  createReview: (productId, data) => 
+    axios.post(`${API}/products/${productId}/reviews`, data, { headers: getAuthHeaders() }),
+  getRelated: (productId, limit = 4) => 
+    axios.get(`${API}/products/${productId}/related?limit=${limit}`)
 };
 
 export const promotionsApi = {

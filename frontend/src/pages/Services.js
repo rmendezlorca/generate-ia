@@ -50,7 +50,7 @@ const Services = () => {
       <div className="mb-8">
         <h1 className="text-4xl font-bold font-heading mb-2" data-testid="services-title">
           <Grid3x3 className="inline text-accent mr-2" size={36} />
-          Servicios de Barrio
+          Servicios de Locafy
         </h1>
         <p className="text-slate-600" data-testid="services-subtitle">
           Descubre todos los servicios disponibles en tu comunidad

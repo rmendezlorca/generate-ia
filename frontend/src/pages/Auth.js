@@ -26,7 +26,12 @@ const Auth = () => {
         const result = await login(formData.email, formData.password);
         if (result.success) {
           toast.success('¡Bienvenido de vuelta!');
-          navigate('/');
+          // Redirigir según el rol del usuario
+          if (result.user?.role === 'store') {
+            navigate('/backoffice');
+          } else {
+            navigate('/');
+          }
         } else {
           toast.error(result.error);
         }
@@ -53,12 +58,16 @@ const Auth = () => {
 
   const handleDemoLogin = async () => {
     setLoading(true);
-    const result = await login('demo@barrio.com', 'demo123');
+    const result = await login('demo@locafy.com', 'demo123');
     if (result.success) {
       toast.success('¡Sesión demo iniciada!');
-      navigate('/');
+      if (result.user?.role === 'store') {
+        navigate('/backoffice');
+      } else {
+        navigate('/');
+      }
     } else {
-      toast.info('Crea una cuenta primero con email: demo@barrio.com, password: demo123');
+      toast.info('Crea una cuenta primero con email: demo@locafy.com, password: demo123');
     }
     setLoading(false);
   };
@@ -72,8 +81,8 @@ const Auth = () => {
       >
         {/* Logo */}
         <div className="text-center mb-8" data-testid="auth-logo">
-          <h1 className="text-4xl font-bold font-heading gradient-primary bg-clip-text text-transparent mb-2">
-            Barrio
+          <h1 className="text-4xl font-bold font-heading text-primary mb-2">
+            Locafy
           </h1>
           <p className="text-slate-600">Ahorra en cada esquina</p>
         </div>
@@ -231,7 +240,7 @@ const Auth = () => {
               Accede al backoffice para gestionar tus productos y ventas
             </p>
             <div className="bg-white p-3 rounded-lg text-xs space-y-1 mb-3">
-              <p><strong>Email:</strong> comercio@barrio.com</p>
+              <p><strong>Email:</strong> comercio@locafy.com</p>
               <p><strong>Password:</strong> comercio123</p>
             </div>
             <button

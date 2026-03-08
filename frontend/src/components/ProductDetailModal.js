@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ShoppingCart, Star, MapPin, Package, Tag } from 'lucide-react';
+import ProductReviews from './ProductReviews';
+import RelatedProducts from './RelatedProducts';
 
-const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart }) => {
+const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart, onProductChange }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   if (!isOpen || !product) return null;
@@ -32,14 +34,14 @@ const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart }) =>
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+          className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl relative"
           onClick={(e) => e.stopPropagation()}
           data-testid="product-detail-modal"
         >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all"
+            className="absolute top-4 right-4 z-20 w-10 h-10 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all"
             data-testid="close-detail-modal"
           >
             <X size={20} />
@@ -216,7 +218,7 @@ const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart }) =>
                   onClose();
                 }}
                 disabled={!product.in_stock}
-                className="w-full h-14 bg-gradient-primary text-white rounded-xl font-bold shadow-glow-primary hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transform active:scale-95"
+                className="w-full h-14 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transform active:scale-95"
                 data-testid="add-to-cart-detail"
               >
                 <ShoppingCart size={22} />
@@ -229,6 +231,20 @@ const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart }) =>
                 <p>✓ Retiro en el comercio o delivery disponible</p>
                 <p>✓ Consulta disponibilidad antes de tu visita</p>
               </div>
+
+              {/* Reviews Section */}
+              <ProductReviews productId={product.id} />
+
+              {/* Related Products */}
+              <RelatedProducts 
+                productId={product.id} 
+                onProductClick={(newProduct) => {
+                  if (onProductChange) {
+                    onProductChange(newProduct);
+                    setCurrentImageIndex(0);
+                  }
+                }}
+              />
             </div>
           </div>
         </motion.div>

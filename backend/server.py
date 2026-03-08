@@ -233,6 +233,22 @@ class StoreStats(BaseModel):
     pending_amount: float
     this_month_sales: float
 
+class Review(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str
+    user_id: str
+    user_name: str
+    rating: int = Field(ge=1, le=5)  # 1-5 stars
+    comment: str
+    image_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ReviewCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str
+    image_url: Optional[str] = None
+
 # ============= HELPER FUNCTIONS =============
 
 def hash_password(password: str) -> str:
@@ -456,6 +472,71 @@ async def get_product(product_id: str):
     if isinstance(product.get("created_at"), str):
         product["created_at"] = datetime.fromisoformat(product["created_at"])
     return Product(**product)
+
+# ============= REVIEWS ROUTES =============
+
+@api_router.get("/products/{product_id}/reviews")
+async def get_product_reviews(product_id: str):
+    """Get all reviews for a product"""
+    reviews = await db.reviews.find({"product_id": product_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for review in reviews:
+        if isinstance(review.get("created_at"), str):
+            review["created_at"] = datetime.fromisoformat(review["created_at"])
+    return reviews
+
+@api_router.post("/products/{product_id}/reviews")
+async def create_review(product_id: str, review_data: ReviewCreate, current_user: User = Depends(get_current_user)):
+    """Create a new review for a product"""
+    # Check if product exists
+    product = await db.products.find_one({"id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if user already reviewed this product
+    existing_review = await db.reviews.find_one({
+        "product_id": product_id,
+        "user_id": current_user.id
+    })
+    if existing_review:
+        raise HTTPException(status_code=400, detail="Ya has dejado una reseña para este producto")
+    
+    review = Review(
+        product_id=product_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        rating=review_data.rating,
+        comment=review_data.comment,
+        image_url=review_data.image_url
+    )
+    
+    review_dict = review.model_dump()
+    review_dict["created_at"] = review_dict["created_at"].isoformat()
+    
+    await db.reviews.insert_one(review_dict)
+    
+    return {"message": "Reseña creada exitosamente", "review_id": review.id}
+
+@api_router.get("/products/{product_id}/related")
+async def get_related_products(product_id: str, limit: int = 4):
+    """Get related products based on category and store"""
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Find products in the same category or from the same store
+    related = await db.products.find({
+        "$or": [
+            {"category": product["category"]},
+            {"store_id": product["store_id"]}
+        ],
+        "id": {"$ne": product_id}
+    }, {"_id": 0}).limit(limit).to_list(limit)
+    
+    for p in related:
+        if isinstance(p.get("created_at"), str):
+            p["created_at"] = datetime.fromisoformat(p["created_at"])
+    
+    return related
 
 # ============= PROMOTIONS ROUTES =============
 

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal } from 'lucide-react';
-import { productsApi, storesApi } from '../utils/api';
-import { cartApi } from '../utils/api';
+import { productsApi, storesApi, cartApi } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ProductGallery from '../components/ProductGallery';
 import AdvancedFilters from '../components/AdvancedFilters';
 import ProductDetailModal from '../components/ProductDetailModal';
 
@@ -167,8 +165,22 @@ const Explore = () => {
                   onClick={() => handleProductClick(product)}
                   data-testid={`product-${index}`}
                 >
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <ProductGallery images={allImages} productName={product.name} />
+                  <div className="relative aspect-square overflow-hidden">
+                    <img
+                      src={allImages[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    {allImages.length > 1 && (
+                      <div className="absolute top-3 right-3 px-2 py-1 bg-black/70 text-white text-xs rounded-full font-medium">
+                        1 / {allImages.length}
+                      </div>
+                    )}
+                    {product.discount_percentage && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-secondary text-white text-xs font-bold rounded-full">
+                        -{product.discount_percentage}%
+                      </div>
+                    )}
                   </div>
                   
                   <div className="p-3">
@@ -207,6 +219,7 @@ const Explore = () => {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onAddToCart={handleAddToCart}
+        onProductChange={(newProduct) => setSelectedProduct(newProduct)}
       />
     </div>
   );

@@ -21,8 +21,8 @@ export const Navigation = ({ cartCount = 0 }) => {
       {/* Desktop Navigation */}
       <nav className="hidden md:flex h-20 items-center justify-between px-8 bg-white border-b border-slate-100 sticky top-0 z-40 glass-effect" data-testid="desktop-nav">
         <div className="flex items-center gap-8">
-          <h1 className="text-2xl font-bold font-heading gradient-primary bg-clip-text text-transparent" data-testid="app-logo">
-            Barrio
+          <h1 className="text-2xl font-bold font-heading text-primary" data-testid="app-logo">
+            Locafy
           </h1>
           <div className="flex items-center gap-4">
             {navItems.map((item) => (
