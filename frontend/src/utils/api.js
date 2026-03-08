@@ -87,6 +87,18 @@ export const backofficeApi = {
   updateProduct: (id, data) => axios.put(`${API}/backoffice/products/${id}`, data, { headers: getAuthHeaders() }),
   deleteProduct: (id) => axios.delete(`${API}/backoffice/products/${id}`, { headers: getAuthHeaders() }),
   
+  // Image Upload
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axios.post(`${API}/upload/image`, formData, {
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  
   // Promotions
   getPromotions: () => axios.get(`${API}/backoffice/promotions`, { headers: getAuthHeaders() }),
   createPromotion: (data) => axios.post(`${API}/backoffice/promotions`, data, { headers: getAuthHeaders() }),

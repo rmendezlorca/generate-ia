@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
 import { backofficeApi } from '../../utils/api';
 import { toast } from 'sonner';
+import ImageUploader from '../../components/ImageUploader';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -278,26 +279,30 @@ const Products = () => {
                 />
               </div>
 
+              {/* Main Image Upload */}
+              <ImageUploader
+                label="Imagen Principal"
+                currentImage={formData.image_url}
+                onImageUploaded={(url) => setFormData({...formData, image_url: url})}
+              />
+
               {/* Gallery Images */}
               <div>
                 <label className="block text-sm font-medium mb-2">Galería de Imágenes (opcional - máx 2 adicionales)</label>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
                   {formData.gallery_images.map((img, idx) => (
-                    <input
+                    <ImageUploader
                       key={idx}
-                      type="url"
-                      placeholder={`URL de imagen ${idx + 2}`}
-                      value={img}
-                      onChange={(e) => {
+                      label={`Imagen ${idx + 2}`}
+                      currentImage={img}
+                      onImageUploaded={(url) => {
                         const newGallery = [...formData.gallery_images];
-                        newGallery[idx] = e.target.value;
+                        newGallery[idx] = url;
                         setFormData({...formData, gallery_images: newGallery});
                       }}
-                      className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
                     />
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-2">La primera imagen del formulario es la principal. Agrega hasta 2 imágenes adicionales aquí.</p>
               </div>
 
               <div className="flex gap-4">

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ProductGallery from '../components/ProductGallery';
 import AdvancedFilters from '../components/AdvancedFilters';
+import ProductDetailModal from '../components/ProductDetailModal';
 
 const Explore = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const Explore = () => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     min_price: '',
@@ -71,6 +74,11 @@ const Explore = () => {
     } catch (error) {
       toast.error('Error al agregar producto');
     }
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setShowDetailModal(true);
   };
 
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
@@ -155,10 +163,13 @@ const Explore = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.03 * index }}
-                  className="bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-orange-200 transition-all hover:shadow-lg group"
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-orange-200 transition-all hover:shadow-lg group cursor-pointer"
+                  onClick={() => handleProductClick(product)}
                   data-testid={`product-${index}`}
                 >
-                  <ProductGallery images={allImages} productName={product.name} />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ProductGallery images={allImages} productName={product.name} />
+                  </div>
                   
                   <div className="p-3">
                     <p className="text-xs text-slate-500 mb-1">{product.category}</p>
@@ -172,7 +183,10 @@ const Explore = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleAddToCart(product.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product.id);
+                      }}
                       className="w-full py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-all transform active:scale-95"
                       data-testid={`add-to-cart-${index}`}
                     >
@@ -185,6 +199,15 @@ const Explore = () => {
           </div>
         )}
       </div>
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        store={stores.find(s => s.id === selectedProduct?.store_id)}
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onAddToCart={handleAddToCart}
+      />
     </div>
   );
 };
