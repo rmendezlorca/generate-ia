@@ -22,7 +22,10 @@ export const storesApi = {
     if (params.service) query.append('service', params.service);
     return axios.get(`${API}/stores?${query.toString()}`);
   },
-  getById: (id) => axios.get(`${API}/stores/${id}`)
+  getById: (id) => axios.get(`${API}/stores/${id}`),
+  getReviews: (storeId) => axios.get(`${API}/stores/${storeId}/reviews`),
+  createReview: (storeId, data) => 
+    axios.post(`${API}/stores/${storeId}/reviews`, data, { headers: getAuthHeaders() })
 };
 
 export const productsApi = {
@@ -62,7 +65,21 @@ export const cartApi = {
 
 export const routesApi = {
   optimize: (data) => 
-    axios.post(`${API}/routes/optimize`, data)
+    axios.post(`${API}/routes/optimize`, data),
+  searchProducts: (data) =>
+    axios.post(`${API}/route-search`, data)
+};
+
+export const favoritesApi = {
+  getAll: () => axios.get(`${API}/favorites`, { headers: getAuthHeaders() }),
+  add: (productId) => axios.post(`${API}/favorites/${productId}`, {}, { headers: getAuthHeaders() }),
+  remove: (productId) => axios.delete(`${API}/favorites/${productId}`, { headers: getAuthHeaders() }),
+  check: (productId) => axios.get(`${API}/favorites/check/${productId}`, { headers: getAuthHeaders() })
+};
+
+export const ordersApi = {
+  create: (data) => axios.post(`${API}/orders`, data, { headers: getAuthHeaders() }),
+  getAll: () => axios.get(`${API}/orders`, { headers: getAuthHeaders() })
 };
 
 export const servicesApi = {
@@ -114,5 +131,10 @@ export const backofficeApi = {
     const params = status ? `?status=${status}` : '';
     return axios.get(`${API}/backoffice/sales${params}`, { headers: getAuthHeaders() });
   },
-  createMockSale: () => axios.post(`${API}/backoffice/sales/mock`, {}, { headers: getAuthHeaders() })
+  createMockSale: () => axios.post(`${API}/backoffice/sales/mock`, {}, { headers: getAuthHeaders() }),
+  
+  // Orders
+  getOrders: () => axios.get(`${API}/backoffice/orders`, { headers: getAuthHeaders() }),
+  updateOrderStatus: (orderId, status) => 
+    axios.put(`${API}/backoffice/orders/${orderId}/status?status=${status}`, {}, { headers: getAuthHeaders() })
 };

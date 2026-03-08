@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Map, Route, ShoppingCart, Grid3x3, User, Bell } from 'lucide-react';
+import { Home, Map, Search, ShoppingCart, Heart, User, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Badge } from './ui/badge';
 
@@ -11,8 +11,8 @@ export const Navigation = ({ cartCount = 0 }) => {
   const navItems = [
     { path: '/', icon: Home, label: 'Inicio', testId: 'nav-home' },
     { path: '/map', icon: Map, label: 'Mapa', testId: 'nav-map' },
-    { path: '/route-planner', icon: Route, label: 'Rutas', testId: 'nav-routes' },
-    { path: '/services', icon: Grid3x3, label: 'Servicios', testId: 'nav-services' },
+    { path: '/route-search', icon: Search, label: 'Buscar', testId: 'nav-search' },
+    { path: '/favorites', icon: Heart, label: 'Favoritos', testId: 'nav-favorites' },
     { path: '/cart', icon: ShoppingCart, label: 'Carrito', badge: cartCount, testId: 'nav-cart' }
   ];
 

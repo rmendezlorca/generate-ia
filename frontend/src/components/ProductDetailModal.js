@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ShoppingCart, Star, MapPin, Package, Tag } from 'lucide-react';
 import ProductReviews from './ProductReviews';
 import RelatedProducts from './RelatedProducts';
+import FavoriteButton from './FavoriteButton';
 
 const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart, onProductChange }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -46,6 +47,11 @@ const ProductDetailModal = ({ product, store, isOpen, onClose, onAddToCart, onPr
           >
             <X size={20} />
           </button>
+
+          {/* Favorite Button */}
+          <div className="absolute top-4 right-16 z-20">
+            <FavoriteButton productId={product.id} />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 max-h-[90vh] overflow-y-auto">
             {/* Image Gallery Section */}

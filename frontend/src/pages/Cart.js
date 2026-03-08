@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Trash2, TrendingDown, CreditCard, ArrowRight } from 'lucide-react';
-import { cartApi, paymentsApi } from '../utils/api';
+import { ShoppingCart, Trash2, TrendingDown, CreditCard, ArrowRight, Truck, Store } from 'lucide-react';
+import { cartApi, paymentsApi, ordersApi } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,6 +14,9 @@ const Cart = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [deliveryType, setDeliveryType] = useState('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -61,28 +64,34 @@ const Cart = () => {
       return;
     }
 
+    if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
+      toast.error('Ingresa una dirección de entrega');
+      return;
+    }
+
     setProcessing(true);
     setShowPaymentModal(false);
     
     try {
-      const response = await paymentsApi.mock({
-        amount: cart.total,
-        payment_method: paymentMethod,
-        user_id: cart.user_id
+      // Create the order
+      await ordersApi.create({
+        delivery_type: deliveryType,
+        delivery_address: deliveryType === 'delivery' ? deliveryAddress : null,
+        delivery_notes: deliveryNotes || null,
+        payment_method: paymentMethod
       });
 
-      if (response.data.success) {
-        const methodNames = {
-          platform: 'Plataforma',
-          qr: 'Código QR',
-          cash: 'Efectivo'
-        };
-        toast.success(`Pago procesado exitosamente - Método: ${methodNames[paymentMethod]} (MOCK)`);
-        await cartApi.clear();
-        loadCart();
-      }
+      const methodNames = {
+        platform: 'Plataforma',
+        qr: 'Código QR',
+        cash: 'Efectivo'
+      };
+      
+      toast.success(`¡Pedido creado exitosamente! Método de pago: ${methodNames[paymentMethod]}`);
+      loadCart();
+      navigate('/notifications');
     } catch (error) {
-      toast.error('Error al procesar el pago');
+      toast.error(error.response?.data?.detail || 'Error al procesar el pedido');
     } finally {
       setProcessing(false);
     }
@@ -186,6 +195,69 @@ const Cart = () => {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl p-6 shadow-card sticky top-6" data-testid="cart-summary">
             <h2 className="text-xl font-bold mb-6">Resumen de Compra</h2>
+
+            {/* Delivery Type Selection */}
+            <div className="mb-6">
+              <h3 className="font-medium mb-3">Tipo de entrega</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setDeliveryType('pickup')}
+                  className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                    deliveryType === 'pickup'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  data-testid="pickup-option"
+                >
+                  <Store size={24} className={deliveryType === 'pickup' ? 'text-primary' : 'text-slate-500'} />
+                  <span className={`text-sm font-medium ${deliveryType === 'pickup' ? 'text-primary' : 'text-slate-600'}`}>
+                    Retiro en local
+                  </span>
+                </button>
+                <button
+                  onClick={() => setDeliveryType('delivery')}
+                  className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                    deliveryType === 'delivery'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  data-testid="delivery-option"
+                >
+                  <Truck size={24} className={deliveryType === 'delivery' ? 'text-primary' : 'text-slate-500'} />
+                  <span className={`text-sm font-medium ${deliveryType === 'delivery' ? 'text-primary' : 'text-slate-600'}`}>
+                    Delivery
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Delivery Address */}
+            {deliveryType === 'delivery' && (
+              <div className="mb-6 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Dirección de entrega *</label>
+                  <input
+                    type="text"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="Ej: Av. Principal 123, Depto 4B"
+                    className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    data-testid="delivery-address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Notas para el repartidor</label>
+                  <textarea
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    placeholder="Ej: Tocar el timbre 2 veces"
+                    className="w-full p-3 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    rows={2}
+                    data-testid="delivery-notes"
+                  />
+                </div>
+              </div>
+            )}
             
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-slate-600">

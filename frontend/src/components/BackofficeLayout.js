@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Zap, DollarSign, LogOut, Home } from 'lucide-react';
+import { LayoutDashboard, Package, Zap, DollarSign, ShoppingBag, LogOut, Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ const BackofficeLayout = () => {
 
   const navItems = [
     { path: '/backoffice', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { path: '/backoffice/orders', icon: ShoppingBag, label: 'Pedidos' },
     { path: '/backoffice/products', icon: Package, label: 'Productos' },
     { path: '/backoffice/promotions', icon: Zap, label: 'Promociones' },
     { path: '/backoffice/sales', icon: DollarSign, label: 'Cuenta Corriente' }

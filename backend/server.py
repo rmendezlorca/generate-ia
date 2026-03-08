@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import math
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
@@ -248,6 +249,62 @@ class ReviewCreate(BaseModel):
     rating: int = Field(ge=1, le=5)
     comment: str
     image_url: Optional[str] = None
+
+# ============= NEW MODELS =============
+
+class Favorite(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    product_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StoreReview(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    store_id: str
+    user_id: str
+    user_name: str
+    rating: int = Field(ge=1, le=5)
+    comment: str
+    image_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StoreReviewCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str
+    image_url: Optional[str] = None
+
+class Order(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_name: str
+    user_phone: Optional[str] = None
+    store_id: str
+    store_name: str
+    items: List[CartItem] = []
+    total: float
+    delivery_type: str = "pickup"  # "pickup" or "delivery"
+    delivery_address: Optional[str] = None
+    delivery_notes: Optional[str] = None
+    status: str = "pending"  # pending, preparing, ready, delivered, cancelled
+    payment_method: str = "cash"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderCreate(BaseModel):
+    delivery_type: str = "pickup"
+    delivery_address: Optional[str] = None
+    delivery_notes: Optional[str] = None
+    payment_method: str = "cash"
+
+class RouteSearchRequest(BaseModel):
+    origin_lat: float
+    origin_lng: float
+    destination_lat: float
+    destination_lng: float
+    product_search: str
+    max_detour_km: float = 2.0
 
 # ============= HELPER FUNCTIONS =============
 
@@ -537,6 +594,320 @@ async def get_related_products(product_id: str, limit: int = 4):
             p["created_at"] = datetime.fromisoformat(p["created_at"])
     
     return related
+
+# ============= FAVORITES ROUTES =============
+
+@api_router.get("/favorites")
+async def get_favorites(current_user: User = Depends(get_current_user)):
+    """Get user's favorite products"""
+    favorites = await db.favorites.find({"user_id": current_user.id}, {"_id": 0}).to_list(100)
+    
+    # Get product details for each favorite
+    product_ids = [f["product_id"] for f in favorites]
+    products = await db.products.find({"id": {"$in": product_ids}}, {"_id": 0}).to_list(100)
+    
+    # Create a map for quick lookup
+    product_map = {p["id"]: p for p in products}
+    
+    result = []
+    for fav in favorites:
+        if fav["product_id"] in product_map:
+            product = product_map[fav["product_id"]]
+            result.append({
+                "favorite_id": fav["id"],
+                "product": product,
+                "added_at": fav["created_at"]
+            })
+    
+    return result
+
+@api_router.post("/favorites/{product_id}")
+async def add_favorite(product_id: str, current_user: User = Depends(get_current_user)):
+    """Add product to favorites"""
+    # Check if product exists
+    product = await db.products.find_one({"id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    # Check if already favorited
+    existing = await db.favorites.find_one({
+        "user_id": current_user.id,
+        "product_id": product_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Este producto ya está en favoritos")
+    
+    favorite = Favorite(user_id=current_user.id, product_id=product_id)
+    fav_dict = favorite.model_dump()
+    fav_dict["created_at"] = fav_dict["created_at"].isoformat()
+    
+    await db.favorites.insert_one(fav_dict)
+    return {"message": "Producto agregado a favoritos", "favorite_id": favorite.id}
+
+@api_router.delete("/favorites/{product_id}")
+async def remove_favorite(product_id: str, current_user: User = Depends(get_current_user)):
+    """Remove product from favorites"""
+    result = await db.favorites.delete_one({
+        "user_id": current_user.id,
+        "product_id": product_id
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Favorito no encontrado")
+    return {"message": "Producto eliminado de favoritos"}
+
+@api_router.get("/favorites/check/{product_id}")
+async def check_favorite(product_id: str, current_user: User = Depends(get_current_user)):
+    """Check if product is in favorites"""
+    existing = await db.favorites.find_one({
+        "user_id": current_user.id,
+        "product_id": product_id
+    })
+    return {"is_favorite": existing is not None}
+
+# ============= STORE REVIEWS ROUTES =============
+
+@api_router.get("/stores/{store_id}/reviews")
+async def get_store_reviews(store_id: str):
+    """Get all reviews for a store"""
+    reviews = await db.store_reviews.find({"store_id": store_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for review in reviews:
+        if isinstance(review.get("created_at"), str):
+            review["created_at"] = datetime.fromisoformat(review["created_at"])
+    return reviews
+
+@api_router.post("/stores/{store_id}/reviews")
+async def create_store_review(store_id: str, review_data: StoreReviewCreate, current_user: User = Depends(get_current_user)):
+    """Create a review for a store"""
+    # Check if store exists
+    store = await db.stores.find_one({"id": store_id})
+    if not store:
+        raise HTTPException(status_code=404, detail="Tienda no encontrada")
+    
+    # Check if user already reviewed this store
+    existing = await db.store_reviews.find_one({
+        "store_id": store_id,
+        "user_id": current_user.id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya has dejado una reseña para esta tienda")
+    
+    review = StoreReview(
+        store_id=store_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        rating=review_data.rating,
+        comment=review_data.comment,
+        image_url=review_data.image_url
+    )
+    
+    review_dict = review.model_dump()
+    review_dict["created_at"] = review_dict["created_at"].isoformat()
+    
+    await db.store_reviews.insert_one(review_dict)
+    
+    # Update store average rating
+    all_reviews = await db.store_reviews.find({"store_id": store_id}, {"rating": 1}).to_list(1000)
+    avg_rating = sum(r["rating"] for r in all_reviews) / len(all_reviews)
+    await db.stores.update_one({"id": store_id}, {"$set": {"rating": round(avg_rating, 1)}})
+    
+    return {"message": "Reseña creada exitosamente", "review_id": review.id}
+
+# ============= ORDERS ROUTES =============
+
+@api_router.post("/orders")
+async def create_order(order_data: OrderCreate, current_user: User = Depends(get_current_user)):
+    """Create a new order from cart"""
+    # Get user's cart
+    cart = await db.carts.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not cart or not cart.get("items"):
+        raise HTTPException(status_code=400, detail="El carrito está vacío")
+    
+    # Group items by store
+    stores_items = {}
+    for item in cart["items"]:
+        store_id = item["store_id"]
+        if store_id not in stores_items:
+            stores_items[store_id] = {
+                "store_name": item["store_name"],
+                "items": [],
+                "total": 0
+            }
+        stores_items[store_id]["items"].append(item)
+        stores_items[store_id]["total"] += item["price"] * item["quantity"]
+    
+    # Create order for each store
+    orders_created = []
+    for store_id, store_data in stores_items.items():
+        order = Order(
+            user_id=current_user.id,
+            user_name=current_user.name,
+            user_phone=current_user.phone,
+            store_id=store_id,
+            store_name=store_data["store_name"],
+            items=store_data["items"],
+            total=store_data["total"],
+            delivery_type=order_data.delivery_type,
+            delivery_address=order_data.delivery_address,
+            delivery_notes=order_data.delivery_notes,
+            payment_method=order_data.payment_method
+        )
+        
+        order_dict = order.model_dump()
+        order_dict["created_at"] = order_dict["created_at"].isoformat()
+        
+        await db.orders.insert_one(order_dict)
+        orders_created.append(order.id)
+        
+        # Create notification for store owner
+        store_user = await db.users.find_one({"store_id": store_id, "role": "store"})
+        if store_user:
+            notification = Notification(
+                user_id=store_user["id"],
+                title="¡Nuevo Pedido!" if order_data.delivery_type == "pickup" else "¡Nuevo Pedido con Delivery!",
+                message=f"Tienes un nuevo pedido de {current_user.name} por ${store_data['total']:.2f}",
+                type="order"
+            )
+            notif_dict = notification.model_dump()
+            notif_dict["created_at"] = notif_dict["created_at"].isoformat()
+            await db.notifications.insert_one(notif_dict)
+    
+    # Clear the cart
+    await db.carts.update_one(
+        {"user_id": current_user.id},
+        {"$set": {"items": [], "total": 0, "total_savings": 0}}
+    )
+    
+    return {"message": "Pedido creado exitosamente", "order_ids": orders_created}
+
+@api_router.get("/orders")
+async def get_user_orders(current_user: User = Depends(get_current_user)):
+    """Get user's orders"""
+    orders = await db.orders.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for order in orders:
+        if isinstance(order.get("created_at"), str):
+            order["created_at"] = datetime.fromisoformat(order["created_at"])
+    return orders
+
+@api_router.get("/backoffice/orders")
+async def get_store_orders(current_user: User = Depends(get_current_user)):
+    """Get orders for store owner"""
+    if current_user.role != "store" or not current_user.store_id:
+        raise HTTPException(status_code=403, detail="Solo comercios pueden ver pedidos")
+    
+    orders = await db.orders.find({"store_id": current_user.store_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for order in orders:
+        if isinstance(order.get("created_at"), str):
+            order["created_at"] = datetime.fromisoformat(order["created_at"])
+    return orders
+
+@api_router.put("/backoffice/orders/{order_id}/status")
+async def update_order_status(order_id: str, status: str, current_user: User = Depends(get_current_user)):
+    """Update order status"""
+    if current_user.role != "store":
+        raise HTTPException(status_code=403, detail="Solo comercios pueden actualizar pedidos")
+    
+    valid_statuses = ["pending", "preparing", "ready", "delivered", "cancelled"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Estado inválido. Use: {valid_statuses}")
+    
+    result = await db.orders.update_one(
+        {"id": order_id, "store_id": current_user.store_id},
+        {"$set": {"status": status}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    
+    # Notify customer about status change
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if order:
+        status_messages = {
+            "preparing": "Tu pedido está siendo preparado",
+            "ready": "Tu pedido está listo para retirar",
+            "delivered": "Tu pedido ha sido entregado",
+            "cancelled": "Tu pedido ha sido cancelado"
+        }
+        if status in status_messages:
+            notification = Notification(
+                user_id=order["user_id"],
+                title=f"Actualización de Pedido",
+                message=status_messages[status],
+                type="order"
+            )
+            notif_dict = notification.model_dump()
+            notif_dict["created_at"] = notif_dict["created_at"].isoformat()
+            await db.notifications.insert_one(notif_dict)
+    
+    return {"message": f"Estado actualizado a: {status}"}
+
+# ============= ROUTE SEARCH ROUTES =============
+
+@api_router.post("/route-search")
+async def search_products_on_route(request: RouteSearchRequest):
+    """Search for products along a route"""
+    # Get all stores
+    stores = await db.stores.find({}, {"_id": 0}).to_list(1000)
+    
+    # Calculate which stores are along the route (within max_detour_km)
+    def point_to_line_distance(px, py, x1, y1, x2, y2):
+        """Calculate perpendicular distance from point to line segment"""
+        dx = x2 - x1
+        dy = y2 - y1
+        if dx == 0 and dy == 0:
+            return math.sqrt((px - x1)**2 + (py - y1)**2)
+        
+        t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+        proj_x = x1 + t * dx
+        proj_y = y1 + t * dy
+        
+        # Convert to km (approximate)
+        lat_diff = abs(px - proj_x) * 111
+        lng_diff = abs(py - proj_y) * 111 * math.cos(math.radians(px))
+        return math.sqrt(lat_diff**2 + lng_diff**2)
+    
+    stores_on_route = []
+    for store in stores:
+        distance = point_to_line_distance(
+            store["lat"], store["lng"],
+            request.origin_lat, request.origin_lng,
+            request.destination_lat, request.destination_lng
+        )
+        if distance <= request.max_detour_km:
+            store["distance_from_route"] = round(distance, 2)
+            stores_on_route.append(store)
+    
+    # Search for products in stores on route
+    store_ids = [s["id"] for s in stores_on_route]
+    
+    # Search products by name (case insensitive)
+    products = await db.products.find({
+        "store_id": {"$in": store_ids},
+        "name": {"$regex": request.product_search, "$options": "i"},
+        "in_stock": True
+    }, {"_id": 0}).to_list(100)
+    
+    # Group products by store
+    store_map = {s["id"]: s for s in stores_on_route}
+    results = []
+    
+    for product in products:
+        store = store_map.get(product["store_id"])
+        if store:
+            results.append({
+                "product": product,
+                "store": store,
+                "distance_from_route_km": store["distance_from_route"]
+            })
+    
+    # Sort by distance from route
+    results.sort(key=lambda x: x["distance_from_route_km"])
+    
+    return {
+        "search_query": request.product_search,
+        "stores_on_route": len(stores_on_route),
+        "products_found": len(results),
+        "results": results
+    }
 
 # ============= PROMOTIONS ROUTES =============
 

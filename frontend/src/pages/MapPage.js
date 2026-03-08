@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Navigation2, Sparkles } from 'lucide-react';
+import { Navigation2, Sparkles, ExternalLink } from 'lucide-react';
 import { LeafletMap } from '../components/MapComponent';
 import { storesApi } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import StoreDetailModal from '../components/StoreDetailModal';
+import ProductDetailModal from '../components/ProductDetailModal';
+import { cartApi } from '../utils/api';
 
 const MapPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [stores, setStores] = useState([]);
   const [center, setCenter] = useState([-33.4489, -70.6693]);
   const [selectedStore, setSelectedStore] = useState(null);
+  const [showStoreModal, setShowStoreModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(false);
 
@@ -64,6 +70,32 @@ const MapPage = () => {
 
   const handleStoreClick = (store) => {
     setSelectedStore(store);
+    setShowStoreModal(true);
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+    setShowStoreModal(false);
+  };
+
+  const handleAddToCart = async (productId) => {
+    if (!isAuthenticated) {
+      toast.error('Debes iniciar sesión');
+      navigate('/auth');
+      return;
+    }
+    try {
+      await cartApi.add(productId, 1);
+      toast.success('Producto agregado al carrito');
+    } catch (error) {
+      toast.error('Error al agregar al carrito');
+    }
+  };
+
+  const openNavigationToStore = (store) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${store.lat},${store.lng}&travelmode=driving`;
+    window.open(url, '_blank');
   };
 
   if (loading) {
@@ -183,11 +215,51 @@ const MapPage = () => {
                     </div>
                   </div>
                 </div>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStoreClick(store);
+                    }}
+                    className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all"
+                    data-testid={`view-store-${store.id}`}
+                  >
+                    Ver Local
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openNavigationToStore(store);
+                    }}
+                    className="py-2 px-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-all flex items-center gap-1"
+                    data-testid={`navigate-store-${store.id}`}
+                  >
+                    <ExternalLink size={14} />
+                    Ir
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Store Detail Modal */}
+      <StoreDetailModal
+        store={selectedStore}
+        isOpen={showStoreModal}
+        onClose={() => setShowStoreModal(false)}
+        onProductClick={handleProductClick}
+      />
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        store={stores.find(s => s.id === selectedProduct?.store_id)}
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        onAddToCart={handleAddToCart}
+      />
     </div>
   );
 };

@@ -12,11 +12,13 @@ import Home from './pages/Home';
 import Explore from './pages/Explore';
 import MapPage from './pages/MapPage';
 import RoutePlanner from './pages/RoutePlanner';
+import RouteSearch from './pages/RouteSearch';
 import Cart from './pages/Cart';
 import Services from './pages/Services';
 import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
+import Favorites from './pages/Favorites';
 
 // Backoffice
 import BackofficeLayout from './components/BackofficeLayout';
@@ -24,6 +26,7 @@ import Dashboard from './pages/backoffice/Dashboard';
 import Products from './pages/backoffice/Products';
 import Promotions from './pages/backoffice/Promotions';
 import Sales from './pages/backoffice/Sales';
+import Orders from './pages/backoffice/Orders';
 
 const AppContent = () => {
   const location = useLocation();
@@ -68,11 +71,13 @@ const AppContent = () => {
         <Route path="/explore" element={<Explore />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/route-planner" element={<RoutePlanner />} />
+        <Route path="/route-search" element={<RouteSearch />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/services" element={<Services />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/favorites" element={<Favorites />} />
         
         {/* Backoffice Routes */}
         <Route path="/backoffice" element={<BackofficeLayout />}>
@@ -80,6 +85,7 @@ const AppContent = () => {
           <Route path="products" element={<Products />} />
           <Route path="promotions" element={<Promotions />} />
           <Route path="sales" element={<Sales />} />
+          <Route path="orders" element={<Orders />} />
         </Route>
       </Routes>
       <Toaster position="top-center" richColors />
