@@ -1,53 +1,84 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import '@/App.css';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { Navigation } from './components/Navigation';
+import { Toaster } from './components/ui/sonner';
+import { cartApi, seedApi } from './utils/api';
+import { useAuth } from './contexts/AuthContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import Home from './pages/Home';
+import Explore from './pages/Explore';
+import MapPage from './pages/MapPage';
+import RoutePlanner from './pages/RoutePlanner';
+import Cart from './pages/Cart';
+import Services from './pages/Services';
+import Auth from './pages/Auth';
+import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 
-const Home = () => {
-  const helloWorldApi = async () => {
+const AppContent = () => {
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+  const hideNavigation = location.pathname === '/auth';
+
+  useEffect(() => {
+    // Seed database on first load
+    const seedDatabase = async () => {
+      try {
+        await seedApi.seed();
+      } catch (error) {
+        // Database might already be seeded
+        console.log('Database seeding skipped or already done');
+      }
+    };
+    seedDatabase();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCartCount();
+    }
+  }, [isAuthenticated, location]);
+
+  const loadCartCount = async () => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      const response = await cartApi.get();
+      setCartCount(response.data.items.length);
+    } catch (error) {
+      // User might not have a cart yet
+      setCartCount(0);
     }
   };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
+    <div className="App">
+      {!hideNavigation && <Navigation cartCount={cartCount} />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/explore" element={<Explore />} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="/route-planner" element={<RoutePlanner />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/notifications" element={<Notifications />} />
+      </Routes>
+      <Toaster position="top-center" richColors />
     </div>
   );
 };
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

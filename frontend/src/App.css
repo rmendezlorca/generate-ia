@@ -1,34 +1,67 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.App {
+  min-height: 100vh;
+  background-color: #F8FAFC;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-bottom: 80px;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+@media (min-width: 768px) {
+  .app-container {
+    padding-bottom: 20px;
+  }
 }
 
-.App-link {
-    color: #61dafb;
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+  }
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Map Container */
+.map-container {
+  height: 500px;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    height: 400px;
+  }
+}
+
+/* Product Grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* Store Card Hover Effect */
+.store-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.store-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.1);
 }
