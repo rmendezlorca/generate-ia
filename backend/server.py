@@ -90,7 +90,8 @@ class Product(BaseModel):
     price: float
     original_price: Optional[float] = None
     discount_percentage: Optional[float] = None
-    image_url: str
+    image_url: str  # Main image
+    gallery_images: List[str] = []  # Additional gallery images (max 2 more)
     in_stock: bool = True
     is_promoted: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -180,6 +181,7 @@ class ProductCreate(BaseModel):
     price: float
     original_price: Optional[float] = None
     image_url: str
+    gallery_images: List[str] = []
     in_stock: bool = True
     is_promoted: bool = False
 
@@ -190,6 +192,7 @@ class ProductUpdate(BaseModel):
     price: Optional[float] = None
     original_price: Optional[float] = None
     image_url: Optional[str] = None
+    gallery_images: Optional[List[str]] = None
     in_stock: Optional[bool] = None
     is_promoted: Optional[bool] = None
 
@@ -211,6 +214,7 @@ class Sale(BaseModel):
     total: float
     customer_id: str
     customer_name: str
+    payment_method: str = "platform"  # "platform", "cash", "qr"
     status: str = "completed"  # completed, pending, cancelled
     payment_status: str = "paid"  # paid, pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -330,8 +334,30 @@ async def update_location(lat: float, lng: float, current_user: User = Depends(g
 # ============= STORES ROUTES =============
 
 @api_router.get("/stores", response_model=List[Store])
-async def get_stores(lat: Optional[float] = None, lng: Optional[float] = None, radius_km: float = 10.0):
-    stores = await db.stores.find({}, {"_id": 0}).to_list(1000)
+async def get_stores(
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: float = 10.0,
+    min_rating: Optional[float] = None,
+    category: Optional[str] = None,
+    has_promotions: bool = False,
+    service: Optional[str] = None
+):
+    query = {}
+    
+    if min_rating:
+        query["rating"] = {"$gte": min_rating}
+    
+    if category:
+        query["category"] = category
+    
+    if has_promotions:
+        query["active_promotions"] = {"$gt": 0}
+    
+    if service:
+        query["services"] = service
+    
+    stores = await db.stores.find(query, {"_id": 0}).to_list(1000)
     
     for store in stores:
         if isinstance(store.get("created_at"), str):
@@ -365,7 +391,12 @@ async def get_store(store_id: str):
 async def get_products(
     store_id: Optional[str] = None,
     category: Optional[str] = None,
-    promoted_only: bool = False
+    promoted_only: bool = False,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    in_stock_only: bool = False,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None  # "price_asc", "price_desc", "name", "newest"
 ):
     query = {}
     if store_id:
@@ -374,12 +405,40 @@ async def get_products(
         query["category"] = category
     if promoted_only:
         query["is_promoted"] = True
+    if in_stock_only:
+        query["in_stock"] = True
+    
+    # Price range filter
+    if min_price is not None or max_price is not None:
+        price_filter = {}
+        if min_price is not None:
+            price_filter["$gte"] = min_price
+        if max_price is not None:
+            price_filter["$lte"] = max_price
+        query["price"] = price_filter
+    
+    # Search filter
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}}
+        ]
     
     products = await db.products.find(query, {"_id": 0}).to_list(1000)
     
     for product in products:
         if isinstance(product.get("created_at"), str):
             product["created_at"] = datetime.fromisoformat(product["created_at"])
+    
+    # Sorting
+    if sort_by == "price_asc":
+        products.sort(key=lambda x: x["price"])
+    elif sort_by == "price_desc":
+        products.sort(key=lambda x: x["price"], reverse=True)
+    elif sort_by == "name":
+        products.sort(key=lambda x: x["name"])
+    elif sort_by == "newest":
+        products.sort(key=lambda x: x["created_at"], reverse=True)
     
     return products
 

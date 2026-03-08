@@ -16,6 +16,7 @@ const Products = () => {
     price: '',
     original_price: '',
     image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300',
+    gallery_images: ['', ''],
     in_stock: true,
     is_promoted: false
   });
@@ -43,7 +44,8 @@ const Products = () => {
       const data = {
         ...formData,
         price: parseFloat(formData.price),
-        original_price: formData.original_price ? parseFloat(formData.original_price) : null
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        gallery_images: formData.gallery_images.filter(img => img.trim() !== '')
       };
 
       if (editingProduct) {
@@ -72,6 +74,7 @@ const Products = () => {
       price: product.price.toString(),
       original_price: product.original_price?.toString() || '',
       image_url: product.image_url,
+      gallery_images: [...(product.gallery_images || []), '', ''].slice(0, 2),
       in_stock: product.in_stock,
       is_promoted: product.is_promoted
     });
@@ -98,6 +101,7 @@ const Products = () => {
       price: '',
       original_price: '',
       image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300',
+      gallery_images: ['', ''],
       in_stock: true,
       is_promoted: false
     });
@@ -272,6 +276,28 @@ const Products = () => {
                   onChange={(e) => setFormData({...formData, original_price: e.target.value})}
                   className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
+              </div>
+
+              {/* Gallery Images */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Galería de Imágenes (opcional - máx 2 adicionales)</label>
+                <div className="space-y-2">
+                  {formData.gallery_images.map((img, idx) => (
+                    <input
+                      key={idx}
+                      type="url"
+                      placeholder={`URL de imagen ${idx + 2}`}
+                      value={img}
+                      onChange={(e) => {
+                        const newGallery = [...formData.gallery_images];
+                        newGallery[idx] = e.target.value;
+                        setFormData({...formData, gallery_images: newGallery});
+                      }}
+                      className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">La primera imagen del formulario es la principal. Agrega hasta 2 imágenes adicionales aquí.</p>
               </div>
 
               <div className="flex gap-4">

@@ -5,6 +5,7 @@ import { cartApi, paymentsApi } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const Cart = () => {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -53,22 +55,29 @@ const Cart = () => {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (paymentMethod) => {
     if (!cart || cart.items.length === 0) {
       toast.error('El carrito está vacío');
       return;
     }
 
     setProcessing(true);
+    setShowPaymentModal(false);
+    
     try {
       const response = await paymentsApi.mock({
         amount: cart.total,
-        payment_method: 'mock',
+        payment_method: paymentMethod,
         user_id: cart.user_id
       });
 
       if (response.data.success) {
-        toast.success('Pago procesado exitosamente (MOCK)');
+        const methodNames = {
+          platform: 'Plataforma',
+          qr: 'Código QR',
+          cash: 'Efectivo'
+        };
+        toast.success(`Pago procesado exitosamente - Método: ${methodNames[paymentMethod]} (MOCK)`);
         await cartApi.clear();
         loadCart();
       }
@@ -203,7 +212,7 @@ const Cart = () => {
             </div>
 
             <button
-              onClick={handleCheckout}
+              onClick={() => setShowPaymentModal(true)}
               disabled={processing}
               className="w-full py-4 bg-gradient-primary text-white rounded-xl font-bold shadow-glow-primary hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               data-testid="checkout-btn"
@@ -222,24 +231,24 @@ const Cart = () => {
             </button>
 
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="font-bold text-blue-900 text-sm mb-2">Pago MOCK Activo</h3>
-              <p className="text-xs text-blue-800 mb-2">
-                El sistema de pagos está en modo de prueba. Para integrar Mercado Pago:
-              </p>
-              <details className="text-xs text-blue-700">
-                <summary className="cursor-pointer font-medium mb-2">Ver instrucciones</summary>
-                <div className="mt-2 space-y-1 bg-white p-2 rounded">
-                  <p>1. Instalar: <code className="bg-slate-100 px-1 rounded">pip install mercadopago</code></p>
-                  <p>2. Obtener API keys desde: <a href="https://www.mercadopago.com/developers" target="_blank" rel="noopener noreferrer" className="underline">Mercado Pago Developers</a></p>
-                  <p>3. Agregar a <code className="bg-slate-100 px-1 rounded">/app/backend/.env</code>:</p>
-                  <code className="block bg-slate-900 text-green-400 p-1 rounded mt-1 text-[10px]">MERCADOPAGO_ACCESS_TOKEN=tu_token</code>
-                  <p className="mt-2">4. Reemplazar el endpoint mock en <code className="bg-slate-100 px-1 rounded">/app/backend/server.py</code> con la implementación real siguiendo los comentarios del código</p>
-                </div>
-              </details>
+              <h3 className="font-bold text-blue-900 text-sm mb-2">Métodos de Pago Disponibles</h3>
+              <ul className="text-xs text-blue-800 space-y-1">
+                <li>💳 Pago en plataforma (integración preparada para Mercado Pago)</li>
+                <li>📱 Código QR (escanea con tu app bancaria)</li>
+                <li>💵 Efectivo (paga al retirar en el comercio)</li>
+              </ul>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Payment Method Selector Modal */}
+      <PaymentMethodSelector
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSelectMethod={handleCheckout}
+        total={cart?.total || 0}
+      />
     </div>
   );
 };

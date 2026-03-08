@@ -9,9 +9,18 @@ const getAuthHeaders = () => {
 };
 
 export const storesApi = {
-  getAll: (lat, lng, radius = 10) => {
-    const params = lat && lng ? `?lat=${lat}&lng=${lng}&radius_km=${radius}` : '';
-    return axios.get(`${API}/stores${params}`);
+  getAll: (lat, lng, params = {}) => {
+    const query = new URLSearchParams();
+    if (lat && lng) {
+      query.append('lat', lat);
+      query.append('lng', lng);
+    }
+    if (params.radius_km) query.append('radius_km', params.radius_km);
+    if (params.min_rating) query.append('min_rating', params.min_rating);
+    if (params.category) query.append('category', params.category);
+    if (params.has_promotions) query.append('has_promotions', 'true');
+    if (params.service) query.append('service', params.service);
+    return axios.get(`${API}/stores?${query.toString()}`);
   },
   getById: (id) => axios.get(`${API}/stores/${id}`)
 };
@@ -22,6 +31,11 @@ export const productsApi = {
     if (params.store_id) query.append('store_id', params.store_id);
     if (params.category) query.append('category', params.category);
     if (params.promoted_only) query.append('promoted_only', 'true');
+    if (params.min_price) query.append('min_price', params.min_price);
+    if (params.max_price) query.append('max_price', params.max_price);
+    if (params.in_stock_only) query.append('in_stock_only', 'true');
+    if (params.search) query.append('search', params.search);
+    if (params.sort_by) query.append('sort_by', params.sort_by);
     return axios.get(`${API}/products?${query.toString()}`);
   },
   getById: (id) => axios.get(`${API}/products/${id}`)
