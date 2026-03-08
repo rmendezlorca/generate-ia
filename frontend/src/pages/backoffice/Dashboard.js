@@ -8,18 +8,33 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (!user || user.role !== 'store') {
-      toast.error('Acceso denegado');
-      navigate('/');
+    console.log('Dashboard - Auth Loading:', authLoading);
+    console.log('Dashboard - User:', user);
+    console.log('Dashboard - User Role:', user?.role);
+    
+    if (authLoading) return;
+    
+    if (!user) {
+      navigate('/auth');
       return;
     }
+    
+    if (user.role !== 'store') {
+      console.log('Access denied - role is:', user.role);
+      setAccessDenied(true);
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Loading stats...');
     loadStats();
-  }, [user]);
+  }, [user, authLoading]);
 
   const loadStats = async () => {
     try {
@@ -33,10 +48,35 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <div className="max-w-md text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Acceso Denegado</h2>
+          <p className="text-slate-600 mb-6">Esta sección es solo para cuentas de comercio.</p>
+          <p className="text-sm text-slate-500 mb-4">
+            Usuario actual: <strong>{user?.email}</strong> ({user?.role || 'user'})
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-all"
+          >
+            Volver al Inicio
+          </button>
+        </div>
       </div>
     );
   }
