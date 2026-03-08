@@ -240,7 +240,7 @@ const Auth = () => {
               Accede al backoffice para gestionar tus productos y ventas
             </p>
             <div className="bg-white p-3 rounded-lg text-xs space-y-1 mb-3">
-              <p><strong>Email:</strong> comercio@locafy.com</p>
+              <p><strong>Email:</strong> comercio@barrio.com</p>
               <p><strong>Password:</strong> comercio123</p>
             </div>
             <button
